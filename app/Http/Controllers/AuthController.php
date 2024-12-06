@@ -20,7 +20,8 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             // Récupérer l'utilisateur
             $user = Auth::user();
-
+            
+            $user->tokens()->delete();
             // Créer un token d'API
             $token = $user->createToken('LaraPost')->plainTextToken;
 
@@ -30,5 +31,16 @@ class AuthController extends Controller
 
         // Si les identifiants sont incorrects
         return response()->json(['message' => 'Invalid credentials'], 401);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Logout successful',
+        ], 200);
+
+
     }
 }

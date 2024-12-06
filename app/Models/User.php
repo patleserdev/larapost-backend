@@ -13,6 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
  */
 class User extends Authenticatable
 {
+    protected $with = ['roles'];
     use HasApiTokens;
     
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -55,5 +56,29 @@ class User extends Authenticatable
     public function posts()
     {
         return $this->hasMany(Post::class);
+    }
+
+     /**
+     * Get the roles associated with the user.
+     */
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'role_user');
+    }
+
+    /**
+     * Check if user has a specific role.
+     */
+    public function hasRole(string $role): bool
+    {
+        return $this->roles()->where('name', $role)->exists();
+    }
+
+     /**
+     * Check if user has a specific role.
+     */
+    public function hasRoleId($role): bool
+    {
+        return $this->roles()->where('role_id', $role)->exists();
     }
 }

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 
 
 class UserController extends Controller
@@ -18,10 +20,12 @@ class UserController extends Controller
     {
         // On récupère tous les utilisateurs
         $users = User::all();
-
+         
+        // $users = User::with('roles')->get();
 
         // On retourne les informations des utilisateurs en JSON
-        return response()->json($users, 200);
+        // return response()->json($users, 200);
+        return UserResource::collection($users);
     }
 
     /**
@@ -42,6 +46,8 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => bcrypt($request->password)
         ]);
+        $role = Role::find(2);
+        $user->roles()->attach($role->id);
 
         // Log::info('This is some useful information.');
 
@@ -53,7 +59,10 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        return response()->json($user);
+        // $user->load('roles'); // Charger la relation 'roles'
+
+        // return response()->json($user);
+        return new UserResource($user);
     }
 
     /**
@@ -61,19 +70,73 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $request->validate([
-            'name' => 'required|max:100',
-            'email' => 'required|email',
-            'password' => 'required|min:8'
-        ]);
+        Log::debug($request);
+        if ($request->isMethod('put')) 
+        {
 
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => bcrypt($request->password)
-        ]);
+            $request->validate([
+                'name' => 'required|max:100',
+                'email' => 'required|email',
+                'password' => 'required|min:8'
+            ]);
 
-        return response()->json();
+            $user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => bcrypt($request->password),         
+            ]);
+
+            if(!$user->hasRoleId($request->role))
+            {
+                
+                $user->roles()->attach($request->role);
+            }
+        } 
+        elseif ($request->isMethod('patch')) 
+        {
+
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|email|unique:users,email,' . $user,
+                'password' => 'sometimes|min:8',
+                'role' => 'sometimes',
+            ]);
+            $data = array_filter($validated);
+            if (isset($data['password'])) {
+                $data['password'] = bcrypt($data['password']);
+            }
+              
+                if (isset($data['role'])) 
+                {
+                    if(is_array($data['role']))
+                    {
+                        foreach($data['role'] as $value)
+                        {
+                            // Log::debug($value);
+                            if(!$user->hasRoleId($value))
+                            {
+                                
+                                $user->roles()->attach($value);
+                            }
+                        }
+
+                    }
+                    else
+                    {
+                        if(!$user->hasRoleId($data['role']))
+                        {
+                            
+                            $user->roles()->attach($data['role']);
+                        }
+                    }
+                    
+                }
+    
+
+            $user->update($data);
+        }
+
+        return response()->json($user);
     }
 
     /**
