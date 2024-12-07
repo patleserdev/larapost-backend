@@ -36,3 +36,5 @@ l' API est sécurisée avec sanctum , il est nécessaire d'être connecté pour 
 - configuration de vite et react
 - paramétrage du react router
 - premières routes
+
+- 07/12 : optimisation du layout 
